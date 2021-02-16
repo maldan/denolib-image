@@ -1,7 +1,10 @@
-const SOF0 = 0xffc0;
+import { Decoder } from "./Decoder.ts";
 
-// deno-lint-ignore camelcase
-export class Decoder_JPEG {
+export class JPEG {
+    static decode(data: Uint8Array) {
+        new Decoder().decode(data);
+    }
+
     static isValid(data: Uint8Array) {
         return data[0] === 0xff && data[1] === 0xd8;
     }

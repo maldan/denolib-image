@@ -4,9 +4,8 @@ import { Decoder_BMP } from "./decode/Decoder_BMP.ts";
 // deno-lint-ignore camelcase
 import { Decoder_GIF } from "./decode/Decoder_GIF.ts";
 // deno-lint-ignore camelcase
-import { Decoder_JPEG } from "./decode/Decoder_JPEG.ts";
-// deno-lint-ignore camelcase
 import { Decoder_PNG } from "./decode/Decoder_PNG.ts";
+import { JPEG } from "./jpeg/JPEG.ts";
 
 enum ImageType {
     None = "none",
@@ -21,11 +20,15 @@ export class Image {
 
     constructor(image: Uint8Array) {
         this._buffer = image;
+
+        if (this.type === ImageType.JPEG) {
+            JPEG.decode(image);
+        }
     }
 
     get type() {
         const data = this._buffer;
-        if (Decoder_JPEG.isValid(data)) return ImageType.JPEG;
+        if (JPEG.isValid(data)) return ImageType.JPEG;
         if (Decoder_PNG.isValid(data)) return ImageType.PNG;
         if (Decoder_GIF.isValid(data)) return ImageType.GIF;
         if (Decoder_BMP.isValid(data)) return ImageType.BMP;
@@ -39,7 +42,7 @@ export class Image {
 
     static async typeOf(path: string | Uint8Array): Promise<ImageType> {
         const data = typeof path === "string" ? await Deno.readFile(path) : path;
-        if (Decoder_JPEG.isValid(data)) return ImageType.JPEG;
+        if (JPEG.isValid(data)) return ImageType.JPEG;
         if (Decoder_PNG.isValid(data)) return ImageType.PNG;
         if (Decoder_GIF.isValid(data)) return ImageType.GIF;
         if (Decoder_BMP.isValid(data)) return ImageType.BMP;
@@ -54,7 +57,7 @@ export class Image {
 
         // JPEG
         if (type === ImageType.JPEG) {
-            return Decoder_JPEG.resolution(data);
+            return JPEG.resolution(data);
         }
 
         return res;
