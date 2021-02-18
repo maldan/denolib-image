@@ -5,13 +5,15 @@ import { BMP } from "./BMP.ts";
 
 export class Encoder {
     encode(bitmap: BitmapRGB): Uint8Array {
-        const padding = Math.ceil((bitmap.width * 3) / 8) * 8 - bitmap.width * 3;
-        console.log("padding", padding);
+        const bitmapSize =
+            (bitmap.width % 4 ? bitmap.width + (4 - (bitmap.width % 4)) : bitmap.width) *
+            bitmap.height *
+            3;
+        // console.log("padding", padding);
 
-        let totalSize = 2 + 4 + 2 + 2; // BM SIZE RES RES
-        totalSize += 4; // offset
-        totalSize += 40; // header size (40)
-        totalSize += bitmap.width * bitmap.height * 3 + bitmap.height * padding; // pixels
+        const offset = 2 + 4 + 2 + 2 + 4 + 40; // BM SIZE RES RES OFFSET HEADER
+        let totalSize = offset;
+        totalSize += bitmapSize; // pixels
 
         const bytes = new ByteSet(totalSize);
         bytes.write.string("BM"); // Bitmap Signature
@@ -24,9 +26,9 @@ export class Encoder {
         bytes.write.uint16(1); // cp (1)
         bytes.write.uint16(24); // bits per pixel
         bytes.write.uint32(0); // compression type
-        bytes.write.uint32(bitmap.width * bitmap.height * 3 + bitmap.height * padding); // image size
-        bytes.write.uint32(bitmap.width * 1417); // horizontal pixel per meter
-        bytes.write.uint32(bitmap.height * 1417); // vertical pixel per meter
+        bytes.write.uint32(bitmapSize); // image size
+        bytes.write.uint32(0); // horizontal pixel per meter
+        bytes.write.uint32(0); // vertical pixel per meter
         bytes.write.uint32(0); // number of colors in the color palette,
         bytes.write.uint32(0); // important colors
 
@@ -36,7 +38,7 @@ export class Encoder {
                 bytes.write.uint8((bitmap.channel.green.getPixel(i, j) * 255) | 0);
                 bytes.write.uint8((bitmap.channel.red.getPixel(i, j) * 255) | 0);
             }
-            for (let j = 0; j < padding; j++) {
+            while ((offset + bytes.position) % 4) {
                 bytes.write.uint8(0);
             }
         }

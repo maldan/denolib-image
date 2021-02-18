@@ -27,11 +27,16 @@ export class Decoder {
         const bitsPerPixel = bytes.read.uint16();
         const compression = bytes.read.uint32();
 
+        console.log("bpp", bitsPerPixel);
+        console.log("w h", width, height);
+
         // Go to position
         bytes.position = offset;
 
-        const padding = Math.ceil((width * 3) / 8) * 8 - width * 3;
+        // const padding = Math.ceil((width * 3) / 8) * 8 - width * 3;
         const bitmap = new BitmapRGB(width, height);
+
+        // console.log("padding", padding);
 
         for (let j = height - 1; j >= 0; j--) {
             for (let i = 0; i < width; i++) {
@@ -39,10 +44,11 @@ export class Decoder {
                 bitmap.channel.green.setPixel(i, j, bytes.read.uint8() / 255);
                 bitmap.channel.red.setPixel(i, j, bytes.read.uint8() / 255);
             }
-            for (let j = 0; j < padding; j++) {
+            while ((offset + bytes.position) % 4) {
                 bytes.read.uint8();
             }
         }
+
         /*console.log(bytes.read.uint8(), bytes.read.uint8(), bytes.read.uint8());
         console.log(bytes.read.uint8(), bytes.read.uint8(), bytes.read.uint8());
         console.log(bytes.read.uint8(), bytes.read.uint8(), bytes.read.uint8());
