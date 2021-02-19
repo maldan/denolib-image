@@ -1,11 +1,10 @@
 import { ByteSet } from "../../bytearray/mod.ts";
+import { ImageMagick } from "../../imagick/mod.ts";
 import { Bitmap } from "./bitmap/Bitmap.ts";
 import { BitmapRGB } from "./bitmap/BitmapRGB.ts";
 import { BitmapRGBA } from "./bitmap/BitmapRGBA.ts";
 import { BMP } from "./bmp/BMP.ts";
 import { ColorSpace } from "./color/Color.ts";
-// deno-lint-ignore camelcase
-import { Decoder_BMP } from "./decode/Decoder_BMP.ts";
 // deno-lint-ignore camelcase
 import { Decoder_GIF } from "./decode/Decoder_GIF.ts";
 // deno-lint-ignore camelcase
@@ -58,28 +57,37 @@ export class Image<T> {
         if (BMP.isValid(data)) {
             return new Image<T>(BMP.decode<T>(data));
         }
+        if (JPEG.isValid(data)) {
+            const resolution = JPEG.resolution(data);
+            return ((await this.fromRaw(
+                await ImageMagick.getRaw(path),
+                resolution.width,
+                resolution.height,
+                ColorSpace.RGB
+            )) as unknown) as Image<T>;
+        }
         throw new Error("Unsupported format");
     }
 
     static async fromRaw(
-        path: string,
+        path: string | Uint8Array,
         width: number,
         height: number,
         colorSpace: ColorSpace.RGB
     ): Promise<Image<BitmapRGB>>;
     static async fromRaw(
-        path: string,
+        path: string | Uint8Array,
         width: number,
         height: number,
         colorSpace: ColorSpace.RGBA
     ): Promise<Image<BitmapRGBA>>;
     static async fromRaw(
-        path: string,
+        path: string | Uint8Array,
         width: number,
         height: number,
         colorSpace: ColorSpace
     ): Promise<Image<BitmapRGBA | BitmapRGB>> {
-        const data = await Deno.readFile(path);
+        const data = typeof path === "string" ? await Deno.readFile(path) : path;
         const b = ByteSet.from(data);
         const bitmap = new BitmapRGB(width, height);
 
@@ -108,7 +116,7 @@ export class Image<T> {
         if (JPEG.isValid(data)) return ImageType.JPEG;
         if (Decoder_PNG.isValid(data)) return ImageType.PNG;
         if (Decoder_GIF.isValid(data)) return ImageType.GIF;
-        if (Decoder_BMP.isValid(data)) return ImageType.BMP;
+        if (BMP.isValid(data)) return ImageType.BMP;
         return ImageType.None;
     }
 

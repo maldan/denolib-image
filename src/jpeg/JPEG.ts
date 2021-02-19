@@ -1,8 +1,8 @@
 import { Decoder } from "./Decoder.ts";
 
 export class JPEG {
-    static decode(data: Uint8Array) {
-        new Decoder().decode(data);
+    static decode<T>(data: Uint8Array): T {
+        return new Decoder().decode<T>(data);
     }
 
     static isValid(data: Uint8Array) {

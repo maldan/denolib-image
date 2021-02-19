@@ -6,14 +6,18 @@ import { ColorRGB } from "./src/color/ColorRGB.ts";
 import { HART } from "./src/hart/HART.ts";
 import { Image, ImageType } from "./src/Image.ts";
 
-// const img = await Image.from<BitmapRGB>(`C:/Users/black/Desktop/a/t/mina.bmp`);
-const img = await Image.from<BitmapRGB>(`./data/pp.bmp`);
+/*const img = await Image.from<BitmapRGB>(`C:/Users/black/Desktop/a/t/mina.bmp`);
+console.log(img.bitmap.width);*/
+
+const img = await Image.from<BitmapRGB>(`./test/data/guguru.jpg`);
+
+/*const img = await Image.from<BitmapRGB>(`./data/pp.bmp`);
 
 const data = HART.encode(img.bitmap);
 const data2 = HART.decode(data);
 
 Deno.writeFileSync("./data/t.hart", data);
-Deno.writeFileSync("./data/test.bmp", BMP.encode(data2));
+Deno.writeFileSync("./data/test.bmp", BMP.encode(data2));*/
 
 // await img.write("./data/test.bmp", ImageType.BMP);
 
