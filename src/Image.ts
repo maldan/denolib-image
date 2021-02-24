@@ -1,136 +1,84 @@
 import { ByteSet } from "../../bytearray/mod.ts";
-import { ImageMagick } from "../../imagick/mod.ts";
-import { Bitmap } from "./bitmap/Bitmap.ts";
-import { BitmapRGB } from "./bitmap/BitmapRGB.ts";
-import { BitmapRGBA } from "./bitmap/BitmapRGBA.ts";
-import { BMP } from "./bmp/BMP.ts";
-import { ColorSpace } from "./color/Color.ts";
-// deno-lint-ignore camelcase
-import { Decoder_GIF } from "./decode/Decoder_GIF.ts";
-// deno-lint-ignore camelcase
-import { Decoder_PNG } from "./decode/Decoder_PNG.ts";
-import { JPEG } from "./jpeg/JPEG.ts";
+import { ImageMagick, MagickImageFormat } from "../../imagick/mod.ts";
+import { ColorSpace, ImageFormat } from "../mod.ts";
+import { Bitmap } from "./birmap/Bitmap.ts";
 
-export enum ImageType {
-    None = "none",
-    JPEG = "jpeg",
-    PNG = "png",
-    BMP = "bmp",
-    GIF = "gif",
-}
+export class Image {
+    readonly bitmap: Bitmap;
+    readonly format: ImageFormat;
 
-export class Image<T> {
-    //private _buffer: Uint8Array;
-    readonly bitmap: T;
-
-    constructor(image: T) {
-        this.bitmap = image;
-        /*this._buffer = image;
-
-        if (this.type === ImageType.JPEG) {
-            JPEG.decode(image);
-        }*/
+    constructor({ bitmap, format = ImageFormat.RAW }: { bitmap: Bitmap; format?: ImageFormat }) {
+        this.bitmap = bitmap;
+        this.format = format;
     }
 
-    /*get type() {
-        const data = this._buffer;
-        if (JPEG.isValid(data)) return ImageType.JPEG;
-        if (Decoder_PNG.isValid(data)) return ImageType.PNG;
-        if (Decoder_GIF.isValid(data)) return ImageType.GIF;
-        if (Decoder_BMP.isValid(data)) return ImageType.BMP;
-        return ImageType.None;
-    }*/
-
-    to(type: ImageType): Uint8Array {
-        if (type === ImageType.BMP) {
-            return BMP.encode((this.bitmap as unknown) as BitmapRGB);
-        }
-        throw new Error("Unsupported type");
+    get width() {
+        return this.bitmap.width;
     }
 
-    async write(path: string, as: ImageType) {
-        await Deno.writeFile(path, this.to(as));
+    get height() {
+        return this.bitmap.height;
     }
 
-    static async from<T>(path: string): Promise<Image<T>> {
-        const data = await Deno.readFile(path);
-        if (BMP.isValid(data)) {
-            return new Image<T>(BMP.decode<T>(data));
-        }
-        if (JPEG.isValid(data)) {
-            const resolution = JPEG.resolution(data);
-            return ((await this.fromRaw(
-                await ImageMagick.getRaw(path),
-                resolution.width,
-                resolution.height,
-                ColorSpace.RGB
-            )) as unknown) as Image<T>;
-        }
-        throw new Error("Unsupported format");
+    async write(path: string) {
+        const tempFile = (await Deno.makeTempFile()) + ".rgba";
+        await Deno.writeFile(tempFile, this.bitmap.toBuffer());
+        await ImageMagick.convert(tempFile, path, {
+            size: `${this.width}x${this.height}`,
+            depth: 8,
+        });
+        await Deno.remove(tempFile);
     }
 
-    static async fromRaw(
-        path: string | Uint8Array,
-        width: number,
-        height: number,
-        colorSpace: ColorSpace.RGB
-    ): Promise<Image<BitmapRGB>>;
-    static async fromRaw(
-        path: string | Uint8Array,
-        width: number,
-        height: number,
-        colorSpace: ColorSpace.RGBA
-    ): Promise<Image<BitmapRGBA>>;
-    static async fromRaw(
-        path: string | Uint8Array,
-        width: number,
-        height: number,
-        colorSpace: ColorSpace
-    ): Promise<Image<BitmapRGBA | BitmapRGB>> {
-        const data = typeof path === "string" ? await Deno.readFile(path) : path;
-        const b = ByteSet.from(data);
-        const bitmap = new BitmapRGB(width, height);
+    static async fromUrl(path: string) {
+        // Get image raw buffer
+        const buffer = ByteSet.from(
+            await ImageMagick.convertToBuffer(path, MagickImageFormat.RGBA)
+        );
+        // Get image info
+        const info = await ImageMagick.info(path);
+
+        // Create bitmap
+        const bitmap = new Bitmap(
+            info.width,
+            info.height,
+            info.hasAlpha ? ColorSpace.RGBA : ColorSpace.RGB
+        );
 
         let x = 0;
         let y = 0;
+        for (let i = 0; i < buffer.length; i += 4) {
+            const r = buffer.read.uint8() / 255;
+            const g = buffer.read.uint8() / 255;
+            const b = buffer.read.uint8() / 255;
+            const a = buffer.read.uint8() / 255;
 
-        for (let i = 0; i < b.length; i += 3) {
             bitmap.setPixel(x, y, {
-                r: b.read.uint8() / 255,
-                g: b.read.uint8() / 255,
-                b: b.read.uint8() / 255,
+                c0: r,
+                c1: g,
+                c2: b,
+                c3: info.hasAlpha ? a : 1,
             });
             x++;
-            if (x >= width) {
+            if (x >= info.width) {
                 x = 0;
                 y++;
             }
         }
 
-        if (colorSpace === ColorSpace.RGBA) return new Image(bitmap);
-        else return new Image(bitmap);
+        let format = ImageFormat.Unknown;
+
+        if (info.format === "jpeg") format = ImageFormat.JPEG;
+        if (info.format === "png") format = ImageFormat.PNG;
+        if (info.format === "gif") format = ImageFormat.GIF;
+        if (info.format === "bmp" || info.format === "bmp3") format = ImageFormat.BMP;
+
+        const image = new Image({ bitmap, format });
+
+        return image;
     }
 
-    static async typeOf(path: string | Uint8Array): Promise<ImageType> {
-        const data = typeof path === "string" ? await Deno.readFile(path) : path;
-        if (JPEG.isValid(data)) return ImageType.JPEG;
-        if (Decoder_PNG.isValid(data)) return ImageType.PNG;
-        if (Decoder_GIF.isValid(data)) return ImageType.GIF;
-        if (BMP.isValid(data)) return ImageType.BMP;
-        return ImageType.None;
-    }
-
-    static async resolution(path: string | Uint8Array): Promise<{ width: number; height: number }> {
-        const data = typeof path === "string" ? await Deno.readFile(path) : path;
-        const res = { width: 0, height: 0 };
-        const type = await this.typeOf(data);
-        const byteSet = ByteSet.from(data);
-
-        // JPEG
-        if (type === ImageType.JPEG) {
-            return JPEG.resolution(data);
-        }
-
-        return res;
+    static async info(path: string) {
+        return await ImageMagick.info(path);
     }
 }

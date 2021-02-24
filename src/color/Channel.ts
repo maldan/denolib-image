@@ -1,19 +1,4 @@
-// deno-lint-ignore camelcase
-export type Type_ChannelRGB = {
-    red: ColorChannel;
-    green: ColorChannel;
-    blue: ColorChannel;
-};
-
-// deno-lint-ignore camelcase
-export type Type_ChannelRGBA = {
-    red: ColorChannel;
-    green: ColorChannel;
-    blue: ColorChannel;
-    alpha: ColorChannel;
-};
-
-export class ColorChannel {
+export class Channel {
     pixels: number[] = [];
 
     readonly width: number;
