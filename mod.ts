@@ -11,6 +11,7 @@ export enum ColorSpace {
     RGB = "rgb",
     RGBA = "rgba",
     HSV = "hsv",
+    Grayscale = "grayscale",
 }
 
 export { Image } from "./src/Image.ts";

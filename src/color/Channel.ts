@@ -1,5 +1,5 @@
 export class Channel {
-    pixels: number[] = [];
+    pixels: Float32Array;
 
     readonly width: number;
     readonly height: number;
@@ -7,8 +7,36 @@ export class Channel {
     constructor(width: number, height: number) {
         this.width = width;
         this.height = height;
-        this.pixels.length = width * height;
-        this.pixels.fill(0);
+        this.pixels = new Float32Array(width * height);
+    }
+
+    getAvgPixel(x: number, y: number, width: number, height: number) {
+        let value = 0;
+
+        for (let i = 0; i < width; i++) {
+            for (let j = 0; j < height; j++) {
+                const fx = (x + i - width / 2) | 0;
+                const fy = (y + j - height / 2) | 0;
+                value += this.pixels[(fx % this.width) + (fy % this.height) * this.width] ?? 0;
+            }
+        }
+
+        return value / (width * height);
+    }
+
+    getMaxPixel(x: number, y: number, width: number, height: number) {
+        const value = new Array(width * height);
+        let pos = 0;
+        for (let i = 0; i < width; i++) {
+            for (let j = 0; j < height; j++) {
+                const fx = (x + i - width / 2) | 0;
+                const fy = (y + j - height / 2) | 0;
+                value[pos++] =
+                    this.pixels[(fx % this.width) + (fy % this.height) * this.width] ?? 0;
+            }
+        }
+
+        return Math.max(...value);
     }
 
     getPixel(x: number, y: number) {
@@ -25,12 +53,12 @@ export class Channel {
         this.pixels[(~~x % this.width) + (~~y % this.height) * this.width] = value;
     }
 
-    each(fn: (c: number) => number | undefined | void) {
+    /*map(fn: (c: number) => number | undefined | void) {
         for (let i = 0; i < this.pixels.length; i++) {
             const data = fn(this.pixels[i]);
             if (data !== undefined) {
                 this.pixels[i] = data;
             }
         }
-    }
+    }*/
 }

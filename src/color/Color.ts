@@ -2,6 +2,9 @@ import { Console } from "../../deps.ts";
 import { ColorSpace } from "./../../mod.ts";
 import { Channel } from "./Channel.ts";
 
+// deno-lint-ignore camelcase
+type Type_ColorParams = { c0?: number; c1?: number; c2?: number; c3?: number };
+
 export class Color {
     c0 = 0;
     c1 = 0;
@@ -41,10 +44,6 @@ export class Color {
             this.c2 = c2 ?? 0;
             this.c3 = c3 ?? 0;
         }
-    }
-
-    get [0]() {
-        return this.c0;
     }
 
     difference(c: Color): number {
@@ -125,18 +124,36 @@ export class Color {
         }
     }
 
-    mul(c0 = 1, c1 = 1, c2 = 1, c3 = 1) {
-        this.c0 *= c0;
-        this.c1 *= c1;
-        this.c2 *= c2;
-        this.c3 *= c3;
+    mul({ c0, c1, c2, c3 }: Type_ColorParams = {}): Color {
+        const c = this.clone();
+        if (c0) c.c0 *= c0;
+        if (c1) c.c1 *= c1;
+        if (c2) c.c2 *= c2;
+        if (c3) c.c3 *= c3;
+        return c;
     }
 
-    quantize(level = 255) {
-        this.c0 = Math.round(this.c0 * level) / level;
-        this.c1 = Math.round(this.c1 * level) / level;
-        this.c2 = Math.round(this.c2 * level) / level;
-        this.c3 = Math.round(this.c3 * level) / level;
+    quantize({ c0, c1, c2, c3 }: Type_ColorParams = {}): Color {
+        const c = this.clone();
+        if (c0) c.c0 = Math.round(c.c0 * c0) / c0;
+        if (c1) c.c1 = Math.round(c.c1 * c1) / c1;
+        if (c2) c.c2 = Math.round(c.c2 * c2) / c2;
+        if (c3) c.c3 = Math.round(c.c3 * c3) / c3;
+        return c;
+    }
+
+    clone() {
+        return new Color(this.space, { c0: this.c0, c1: this.c1, c2: this.c2, c3: this.c3 });
+    }
+
+    grayscale() {
+        const scale = (this.c0 * 0.2126 + this.c1 * 0.7152 + this.c2 * 0.0722) / 3;
+        return new Color(ColorSpace.Grayscale, {
+            c0: scale,
+            c1: scale,
+            c2: scale,
+            c3: 1,
+        });
     }
 
     toNumber() {

@@ -4,8 +4,8 @@ import { ColorSpace, ImageFormat } from "../mod.ts";
 import { Bitmap } from "./birmap/Bitmap.ts";
 
 export class Image {
-    readonly bitmap: Bitmap;
-    readonly format: ImageFormat;
+    bitmap: Bitmap;
+    format: ImageFormat;
 
     constructor({ bitmap, format = ImageFormat.RAW }: { bitmap: Bitmap; format?: ImageFormat }) {
         this.bitmap = bitmap;
@@ -21,7 +21,10 @@ export class Image {
     }
 
     async write(path: string) {
-        const tempFile = (await Deno.makeTempFile()) + ".rgba";
+        let format = "rgb";
+        if (this.bitmap.space === ColorSpace.RGBA) format = "rgba";
+        const tempFile = (await Deno.makeTempFile()) + "." + format;
+
         await Deno.writeFile(tempFile, this.bitmap.toBuffer());
         await ImageMagick.convert(tempFile, path, {
             size: `${this.width}x${this.height}`,
